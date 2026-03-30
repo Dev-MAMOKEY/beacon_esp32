@@ -1,6 +1,7 @@
 // ── 시리얼 커맨드 처리 ──────────────────────────
 // USB 시리얼을 통한 설정값 입력/조회 인터페이스
 
+#include <Arduino.h>
 #include "config.h"
 
 extern uint8_t g_psk[];
