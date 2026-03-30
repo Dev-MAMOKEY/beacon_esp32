@@ -40,14 +40,8 @@ typedef enum {
 // ── NVS 설정 ────────────────────────────────────
 #define NVS_NAMESPACE         "beacon"
 #define NVS_KEY_PSK           "psk"
-#define NVS_KEY_MAJOR         "major"
-#define NVS_KEY_MINOR         "minor"
 #define NVS_KEY_SERVICE_UUID  "svc_uuid"
 #define NVS_KEY_CONFIGURED    "configured"
-
-// ── 기본값 ──────────────────────────────────────
-#define DEFAULT_MAJOR         1
-#define DEFAULT_MINOR         1
 
 // ── BLE 디바이스 이름 ───────────────────────────
 #define BLE_DEVICE_NAME       "MAMOKEY-Beacon"
@@ -125,8 +119,6 @@ static inline void generate_uuid_from_mac(const uint8_t* mac, uint8_t* uuid) {
 typedef enum {
     CMD_UNKNOWN,
     CMD_SET_PSK,
-    CMD_SET_MAJOR,
-    CMD_SET_MINOR,
     CMD_SET_SERVICE_UUID,
     CMD_GET_CONFIG,
     CMD_RESET_CONFIG
