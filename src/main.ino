@@ -87,7 +87,7 @@ serial_cmd_t parse_command(const char* line) {
     if (strncmp(line, "SET_PSK ", 8) == 0)            return CMD_SET_PSK;
     if (strncmp(line, "SET_SERVICE_UUID ", 17) == 0)  return CMD_SET_SERVICE_UUID;
     if (strncmp(line, "SET_NAME ", 9) == 0)           return CMD_SET_NAME;
-    if (strcmp(line, "GET_CONFIG") == 0)               return CMD_GET_CONFIG;
+    if (strcmp(line, "GET_CONFIG") == 0)              return CMD_GET_CONFIG;
     if (strcmp(line, "RESET_CONFIG") == 0)            return CMD_RESET_CONFIG;
     return CMD_UNKNOWN;
 }
