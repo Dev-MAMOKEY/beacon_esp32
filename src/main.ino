@@ -9,8 +9,6 @@ Preferences preferences;
 uint8_t g_psk[PSK_LENGTH];
 uint8_t g_beacon_uuid[UUID_LENGTH];    // MAC 기반 자동 생성
 uint8_t g_service_uuid[UUID_LENGTH];   // GATT 서비스 UUID (시리얼 설정)
-uint16_t g_major = DEFAULT_MAJOR;
-uint16_t g_minor = DEFAULT_MINOR;
 bool g_configured = false;             // 필수 설정(PSK, 서비스 UUID)이 완료됐는지
 
 beacon_state_t g_state = STATE_IDLE;
@@ -25,8 +23,6 @@ void nvs_load_config() {
     preferences.begin(NVS_NAMESPACE, true);  // true = 읽기 전용
 
     g_configured = preferences.getBool(NVS_KEY_CONFIGURED, false);
-    g_major = preferences.getUShort(NVS_KEY_MAJOR, DEFAULT_MAJOR);
-    g_minor = preferences.getUShort(NVS_KEY_MINOR, DEFAULT_MINOR);
 
     if (g_configured) {
         preferences.getBytes(NVS_KEY_PSK, g_psk, PSK_LENGTH);
@@ -50,20 +46,6 @@ void nvs_save_service_uuid(const uint8_t* uuid) {
     memcpy(g_service_uuid, uuid, UUID_LENGTH);
 }
 
-void nvs_save_major(uint16_t major) {
-    preferences.begin(NVS_NAMESPACE, false);
-    preferences.putUShort(NVS_KEY_MAJOR, major);
-    preferences.end();
-    g_major = major;
-}
-
-void nvs_save_minor(uint16_t minor) {
-    preferences.begin(NVS_NAMESPACE, false);
-    preferences.putUShort(NVS_KEY_MINOR, minor);
-    preferences.end();
-    g_minor = minor;
-}
-
 void nvs_mark_configured() {
     preferences.begin(NVS_NAMESPACE, false);
     preferences.putBool(NVS_KEY_CONFIGURED, true);
@@ -78,8 +60,6 @@ void nvs_reset() {
 
     memset(g_psk, 0, PSK_LENGTH);
     memset(g_service_uuid, 0, UUID_LENGTH);
-    g_major = DEFAULT_MAJOR;
-    g_minor = DEFAULT_MINOR;
     g_configured = false;
 
     Serial.println("OK: 설정이 초기화되었습니다. 재부팅하세요.");
@@ -98,8 +78,6 @@ void print_hex(const uint8_t* data, int len) {
 
 serial_cmd_t parse_command(const char* line) {
     if (strncmp(line, "SET_PSK ", 8) == 0)          return CMD_SET_PSK;
-    if (strncmp(line, "SET_MAJOR ", 10) == 0)        return CMD_SET_MAJOR;
-    if (strncmp(line, "SET_MINOR ", 10) == 0)        return CMD_SET_MINOR;
     if (strncmp(line, "SET_SERVICE_UUID ", 17) == 0)  return CMD_SET_SERVICE_UUID;
     if (strcmp(line, "GET_CONFIG") == 0)              return CMD_GET_CONFIG;
     if (strcmp(line, "RESET_CONFIG") == 0)            return CMD_RESET_CONFIG;
@@ -132,28 +110,6 @@ void handle_set_service_uuid(const char* arg) {
     Serial.println();
 }
 
-void handle_set_major(const char* arg) {
-    long val = atol(arg);
-    if (val < 0 || val > 65535) {
-        Serial.println("ERROR: Major는 0~65535 범위여야 합니다.");
-        return;
-    }
-    nvs_save_major((uint16_t)val);
-    Serial.print("OK: Major = ");
-    Serial.println(g_major);
-}
-
-void handle_set_minor(const char* arg) {
-    long val = atol(arg);
-    if (val < 0 || val > 65535) {
-        Serial.println("ERROR: Minor는 0~65535 범위여야 합니다.");
-        return;
-    }
-    nvs_save_minor((uint16_t)val);
-    Serial.print("OK: Minor = ");
-    Serial.println(g_minor);
-}
-
 void handle_get_config() {
     Serial.println("=== 현재 설정 ===");
     Serial.print("Configured: ");
@@ -179,11 +135,6 @@ void handle_get_config() {
     }
     Serial.println();
 
-    Serial.print("Major: ");
-    Serial.println(g_major);
-    Serial.print("Minor: ");
-    Serial.println(g_minor);
-
     Serial.print("State: ");
     Serial.println(g_state == STATE_IDLE ? "IDLE" : "ACTIVE");
     Serial.println("=================");
@@ -199,12 +150,6 @@ void process_serial_line(const char* line) {
         case CMD_SET_SERVICE_UUID:
             handle_set_service_uuid(line + 17);
             break;
-        case CMD_SET_MAJOR:
-            handle_set_major(line + 10);
-            break;
-        case CMD_SET_MINOR:
-            handle_set_minor(line + 10);
-            break;
         case CMD_GET_CONFIG:
             handle_get_config();
             break;
@@ -216,8 +161,6 @@ void process_serial_line(const char* line) {
             Serial.println("사용 가능한 명령:");
             Serial.println("  SET_PSK <32자리 hex>");
             Serial.println("  SET_SERVICE_UUID <32자리 hex>");
-            Serial.println("  SET_MAJOR <0~65535>");
-            Serial.println("  SET_MINOR <0~65535>");
             Serial.println("  GET_CONFIG");
             Serial.println("  RESET_CONFIG");
             break;
