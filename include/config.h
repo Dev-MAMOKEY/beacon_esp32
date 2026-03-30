@@ -41,10 +41,12 @@ typedef enum {
 #define NVS_NAMESPACE         "beacon"
 #define NVS_KEY_PSK           "psk"
 #define NVS_KEY_SERVICE_UUID  "svc_uuid"
+#define NVS_KEY_DEVICE_NAME   "dev_name"
 #define NVS_KEY_CONFIGURED    "configured"
 
 // ── BLE 디바이스 이름 ───────────────────────────
-#define BLE_DEVICE_NAME       "MAMOKEY-Beacon"
+#define DEFAULT_DEVICE_NAME   "MAMOKEY-Beacon"
+#define MAX_DEVICE_NAME_LEN   32
 
 // ── LED 설정 ────────────────────────────────────
 #define LED_PIN               48
@@ -120,6 +122,7 @@ typedef enum {
     CMD_UNKNOWN,
     CMD_SET_PSK,
     CMD_SET_SERVICE_UUID,
+    CMD_SET_NAME,
     CMD_GET_CONFIG,
     CMD_RESET_CONFIG
 } serial_cmd_t;
