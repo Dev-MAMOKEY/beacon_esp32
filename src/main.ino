@@ -7,9 +7,10 @@ Preferences preferences;
 
 // NVS에서 로드된 설정값
 uint8_t g_psk[PSK_LENGTH];
-uint8_t g_beacon_uuid[UUID_LENGTH];    // MAC 기반 자동 생성
-uint8_t g_service_uuid[UUID_LENGTH];   // GATT 서비스 UUID (시리얼 설정)
-bool g_configured = false;             // 필수 설정(PSK, 서비스 UUID)이 완료됐는지
+uint8_t g_beacon_uuid[UUID_LENGTH];                          // MAC 기반 자동 생성
+uint8_t g_service_uuid[UUID_LENGTH];                         // GATT 서비스 UUID (시리얼 설정)
+char g_device_name[MAX_DEVICE_NAME_LEN + 1] = DEFAULT_DEVICE_NAME;  // BLE 디바이스 이름 (시리얼 설정)
+bool g_configured = false;                                   // 필수 설정(PSK, 서비스 UUID)이 완료됐는지
 
 beacon_state_t g_state = STATE_IDLE;
 
@@ -28,6 +29,11 @@ void nvs_load_config() {
         preferences.getBytes(NVS_KEY_PSK, g_psk, PSK_LENGTH);
         preferences.getBytes(NVS_KEY_SERVICE_UUID, g_service_uuid, UUID_LENGTH);
     }
+
+    // 디바이스 이름은 필수 설정과 무관하게 로드
+    String name = preferences.getString(NVS_KEY_DEVICE_NAME, DEFAULT_DEVICE_NAME);
+    strncpy(g_device_name, name.c_str(), MAX_DEVICE_NAME_LEN);
+    g_device_name[MAX_DEVICE_NAME_LEN] = '\0';
 
     preferences.end();
 }
@@ -60,6 +66,7 @@ void nvs_reset() {
 
     memset(g_psk, 0, PSK_LENGTH);
     memset(g_service_uuid, 0, UUID_LENGTH);
+    strncpy(g_device_name, DEFAULT_DEVICE_NAME, MAX_DEVICE_NAME_LEN);
     g_configured = false;
 
     Serial.println("OK: 설정이 초기화되었습니다. 재부팅하세요.");
@@ -77,9 +84,10 @@ void print_hex(const uint8_t* data, int len) {
 // ── 시리얼 커맨드 처리 ──────────────────────────
 
 serial_cmd_t parse_command(const char* line) {
-    if (strncmp(line, "SET_PSK ", 8) == 0)          return CMD_SET_PSK;
+    if (strncmp(line, "SET_PSK ", 8) == 0)            return CMD_SET_PSK;
     if (strncmp(line, "SET_SERVICE_UUID ", 17) == 0)  return CMD_SET_SERVICE_UUID;
-    if (strcmp(line, "GET_CONFIG") == 0)              return CMD_GET_CONFIG;
+    if (strncmp(line, "SET_NAME ", 9) == 0)           return CMD_SET_NAME;
+    if (strcmp(line, "GET_CONFIG") == 0)               return CMD_GET_CONFIG;
     if (strcmp(line, "RESET_CONFIG") == 0)            return CMD_RESET_CONFIG;
     return CMD_UNKNOWN;
 }
@@ -110,6 +118,22 @@ void handle_set_service_uuid(const char* arg) {
     Serial.println();
 }
 
+void handle_set_name(const char* arg) {
+    if (strlen(arg) == 0 || strlen(arg) > MAX_DEVICE_NAME_LEN) {
+        Serial.print("ERROR: 이름은 1~");
+        Serial.print(MAX_DEVICE_NAME_LEN);
+        Serial.println("자 사이여야 합니다.");
+        return;
+    }
+    preferences.begin(NVS_NAMESPACE, false);
+    preferences.putString(NVS_KEY_DEVICE_NAME, arg);
+    preferences.end();
+    strncpy(g_device_name, arg, MAX_DEVICE_NAME_LEN);
+    g_device_name[MAX_DEVICE_NAME_LEN] = '\0';
+    Serial.print("OK: Device Name = ");
+    Serial.println(g_device_name);
+}
+
 void handle_get_config() {
     Serial.println("=== 현재 설정 ===");
     Serial.print("Configured: ");
@@ -135,6 +159,9 @@ void handle_get_config() {
     }
     Serial.println();
 
+    Serial.print("Device Name: ");
+    Serial.println(g_device_name);
+
     Serial.print("State: ");
     Serial.println(g_state == STATE_IDLE ? "IDLE" : "ACTIVE");
     Serial.println("=================");
@@ -150,6 +177,9 @@ void process_serial_line(const char* line) {
         case CMD_SET_SERVICE_UUID:
             handle_set_service_uuid(line + 17);
             break;
+        case CMD_SET_NAME:
+            handle_set_name(line + 9);
+            break;
         case CMD_GET_CONFIG:
             handle_get_config();
             break;
@@ -161,6 +191,7 @@ void process_serial_line(const char* line) {
             Serial.println("사용 가능한 명령:");
             Serial.println("  SET_PSK <32자리 hex>");
             Serial.println("  SET_SERVICE_UUID <32자리 hex>");
+            Serial.println("  SET_NAME <이름>");
             Serial.println("  GET_CONFIG");
             Serial.println("  RESET_CONFIG");
             break;
