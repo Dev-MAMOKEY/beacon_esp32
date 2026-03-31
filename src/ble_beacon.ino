@@ -118,6 +118,20 @@ void stop_session_beacon() {
     g_pAdvertising->stop(ADV_INSTANCE_SESSION);
     g_state = STATE_IDLE;
 
+    // GATT connectable 광고가 중단됐을 수 있으므로 재시작
+    if (!g_pAdvertising->isActive(ADV_INSTANCE_GATT)) {
+        NimBLEExtAdvertisement connAdv(BLE_HCI_LE_PHY_1M, BLE_HCI_LE_PHY_1M);
+        connAdv.setLegacyAdvertising(true);
+        connAdv.setConnectable(true);
+        connAdv.setScannable(true);
+        connAdv.setName(g_device_name);
+        connAdv.setMinInterval(ADV_INTERVAL_MIN);
+        connAdv.setMaxInterval(ADV_INTERVAL_MAX);
+        g_pAdvertising->setInstanceData(ADV_INSTANCE_GATT, connAdv);
+        g_pAdvertising->start(ADV_INSTANCE_GATT, 0, 0);
+        Serial.println("BLE: GATT 연결용 광고 재시작");
+    }
+
     Serial.println("BLE: 출석 비콘 광고 종료, IDLE 복귀");
 }
 
