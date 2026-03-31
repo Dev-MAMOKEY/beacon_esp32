@@ -15,7 +15,8 @@ bool gatt_init();
 
 // Extended Advertising 인스턴스 ID
 #define ADV_INSTANCE_FIXED    0   // 고정 비콘 (항상)
-#define ADV_INSTANCE_SESSION  1   // 출석 비콘 (ACTIVE 시에만, Step 5-6에서 구현)
+#define ADV_INSTANCE_SESSION  1   // 출석 비콘 (ACTIVE 시에만)
+#define ADV_INSTANCE_GATT     2   // GATT 연결용 (connectable)
 
 NimBLEExtAdvertising* g_pAdvertising = nullptr;
 TimerHandle_t g_sessionTimer = nullptr;
@@ -85,6 +86,26 @@ bool ble_init_and_start() {
         return false;
     }
 
+    // GATT 연결용 connectable 광고 (디바이스 이름으로 검색 가능)
+    NimBLEExtAdvertisement connAdv(BLE_HCI_LE_PHY_1M, BLE_HCI_LE_PHY_1M);
+    connAdv.setLegacyAdvertising(true);
+    connAdv.setConnectable(true);
+    connAdv.setScannable(true);
+    connAdv.setName(g_device_name);
+    connAdv.setMinInterval(ADV_INTERVAL_MIN);
+    connAdv.setMaxInterval(ADV_INTERVAL_MAX);
+
+    if (!g_pAdvertising->setInstanceData(ADV_INSTANCE_GATT, connAdv)) {
+        Serial.println("ERROR: GATT 연결용 광고 설정 실패");
+        return false;
+    }
+
+    if (!g_pAdvertising->start(ADV_INSTANCE_GATT, 0, 0)) {
+        Serial.println("ERROR: GATT 연결용 광고 시작 실패");
+        return false;
+    }
+
+    Serial.println("GATT 연결용 광고 시작됨");
     return true;
 }
 
