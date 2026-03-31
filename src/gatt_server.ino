@@ -8,7 +8,9 @@
 
 extern uint8_t g_psk[];
 extern uint8_t g_service_uuid[];
+extern char g_device_name[];
 extern beacon_state_t g_state;
+extern NimBLEExtAdvertising* g_pAdvertising;
 
 // ble_beacon.ino의 함수 전방 선언
 void start_session_beacon(const uint8_t* session_uuid, uint16_t duration_sec);
@@ -38,6 +40,25 @@ class AttendanceCallbacks : public NimBLECharacteristicCallbacks {
 
 static AttendanceCallbacks attendanceCallbacks;
 
+// 서버 연결/해제 콜백: 클라이언트가 연결하면 connectable 광고가 자동 중단됨
+// 연결 해제 시 GATT 광고를 재시작해야 다음 연결이 가능
+class ServerCallbacks : public NimBLEServerCallbacks {
+    void onDisconnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo, int reason) override {
+        // 연결 해제 시 GATT connectable 광고 재시작
+        NimBLEExtAdvertisement connAdv(BLE_HCI_LE_PHY_1M, BLE_HCI_LE_PHY_1M);
+        connAdv.setLegacyAdvertising(true);
+        connAdv.setConnectable(true);
+        connAdv.setScannable(true);
+        connAdv.setName(g_device_name);
+        connAdv.setMinInterval(ADV_INTERVAL_MIN);
+        connAdv.setMaxInterval(ADV_INTERVAL_MAX);
+        g_pAdvertising->setInstanceData(ADV_INSTANCE_GATT, connAdv);
+        g_pAdvertising->start(ADV_INSTANCE_GATT, 0, 0);
+    }
+};
+
+static ServerCallbacks serverCallbacks;
+
 // GATT 서버 초기화: 서비스와 Write Characteristic 생성
 bool gatt_init() {
     // 서비스 UUID를 NVS에서 로드한 바이트 배열로 구성
@@ -54,6 +75,8 @@ bool gatt_init() {
         Serial.println("ERROR: GATT 서버 생성 실패");
         return false;
     }
+
+    pServer->setCallbacks(&serverCallbacks);
 
     NimBLEService* pService = pServer->createService(svc_uuid_str);
     if (!pService) {
