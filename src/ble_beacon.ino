@@ -58,6 +58,11 @@ void build_ibeacon_adv(NimBLEExtAdvertisement& adv, const uint8_t* uuid) {
 bool ble_init_and_start() {
     NimBLEDevice::init(g_device_name);
 
+    // GATT 서버를 광고보다 먼저 초기화해야 GAP 서비스 충돌이 없음
+    if (!gatt_init()) {
+        return false;
+    }
+
     g_pAdvertising = NimBLEDevice::getAdvertising();
     if (!g_pAdvertising) {
         Serial.println("ERROR: Extended Advertising 초기화 실패");
@@ -80,11 +85,6 @@ bool ble_init_and_start() {
     }
 
     Serial.println("BLE 고정 비콘 광고 시작됨");
-
-    // GATT 서버 초기화
-    if (!gatt_init()) {
-        return false;
-    }
 
     // GATT 연결용 connectable 광고 (디바이스 이름으로 검색 가능)
     NimBLEExtAdvertisement connAdv(BLE_HCI_LE_PHY_1M, BLE_HCI_LE_PHY_1M);
