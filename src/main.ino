@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Preferences.h>
+#include <NimBLEDevice.h>
 #include "config.h"
 
 // ── 전역 변수 ───────────────────────────────────
@@ -16,6 +17,7 @@ beacon_state_t g_state = STATE_IDLE;
 // 다른 .ino 파일의 함수 전방 선언
 void nvs_load_config();
 void check_serial();
+bool ble_init_and_start();
 
 // ── Arduino 진입점 ──────────────────────────────
 
@@ -44,8 +46,11 @@ void setup() {
     if (!g_configured) {
         Serial.println("설정이 필요합니다. 시리얼로 SET_PSK, SET_SERVICE_UUID를 입력하세요.");
     } else {
-        Serial.println("설정 완료. BLE 시작 준비.");
-        // TODO: BLE 초기화 (Step 4에서 구현)
+        if (ble_init_and_start()) {
+            Serial.println("BLE 초기화 완료.");
+        } else {
+            Serial.println("ERROR: BLE 초기화 실패.");
+        }
     }
 }
 
