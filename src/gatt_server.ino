@@ -84,6 +84,8 @@ bool gatt_init() {
     );
     pCharacteristic->setCallbacks(&attendanceCallbacks);
 
+    pServer->start();
+
     Serial.println("GATT 서버 시작됨");
     return true;
 }
