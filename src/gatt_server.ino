@@ -19,11 +19,7 @@ class AttendanceCallbacks : public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo) override {
         std::string value = pCharacteristic->getValue();
 
-        // 페이로드 길이 검증
-        if (!validate_payload(value.length())) {
-            Serial.println("GATT: 잘못된 페이로드 길이");
-            return;
-        }
+        if (!validate_payload(value.length())) return;
 
         const uint8_t* payload = (const uint8_t*)value.data();
         const uint8_t* received_psk;
@@ -32,23 +28,10 @@ class AttendanceCallbacks : public NimBLECharacteristicCallbacks {
 
         parse_payload(payload, &received_psk, &session_uuid, &duration);
 
-        // PSK 검증
-        if (!verify_psk(received_psk, g_psk)) {
-            Serial.println("GATT: PSK 불일치, 명령 무시");
-            return;
-        }
+        if (!verify_psk(received_psk, g_psk)) return;
+        if (duration == 0 || duration > 600) return;
 
-        // Duration 유효성 검사 (1초 ~ 600초)
-        if (duration == 0 || duration > 600) {
-            Serial.println("GATT: 잘못된 Duration 값");
-            return;
-        }
-
-        Serial.print("GATT: 출석 시작, Duration = ");
-        Serial.print(duration);
-        Serial.println("초");
-
-        // 출석 비콘 광고 시작
+        // 시리얼 출력 없이 바로 실행 (출력은 loop에서 처리)
         start_session_beacon(session_uuid, duration);
     }
 };

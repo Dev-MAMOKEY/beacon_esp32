@@ -20,6 +20,9 @@ bool gatt_init();
 
 NimBLEExtAdvertising* g_pAdvertising = nullptr;
 TimerHandle_t g_sessionTimer = nullptr;
+volatile bool g_session_expired = false;   // 타이머 만료 플래그
+volatile bool g_session_started = false;   // 출석 시작 플래그
+volatile uint16_t g_session_duration = 0;  // 출석 Duration (로그용)
 
 // iBeacon 광고 데이터를 생성하여 NimBLEExtAdvertisement에 설정
 void build_ibeacon_adv(NimBLEExtAdvertisement& adv, const uint8_t* uuid) {
@@ -111,7 +114,7 @@ bool ble_init_and_start() {
 
 // ── 출석 비콘 (세션) ────────────────────────────
 
-// 출석 비콘 광고 종료
+// 출석 비콘 광고 종료 (콜백에서 호출될 수 있으므로 Serial 출력 없음)
 void stop_session_beacon() {
     if (g_state != STATE_ACTIVE) return;
 
@@ -129,22 +132,33 @@ void stop_session_beacon() {
         connAdv.setMaxInterval(ADV_INTERVAL_MAX);
         g_pAdvertising->setInstanceData(ADV_INSTANCE_GATT, connAdv);
         g_pAdvertising->start(ADV_INSTANCE_GATT, 0, 0);
-        Serial.println("BLE: GATT 연결용 광고 재시작");
     }
-
-    Serial.println("BLE: 출석 비콘 광고 종료, IDLE 복귀");
 }
 
-// FreeRTOS 타이머 콜백: Duration 만료 시 출석 비콘을 자동 종료
+// FreeRTOS 타이머 콜백: 플래그만 세팅하고 loop에서 처리
 void session_timer_callback(TimerHandle_t xTimer) {
-    stop_session_beacon();
+    g_session_expired = true;
 }
 
-// 출석 비콘 광고 시작
+// loop()에서 호출하여 이벤트를 메인 태스크에서 안전하게 출력
+void ble_check_events() {
+    if (g_session_started) {
+        g_session_started = false;
+        Serial.print("BLE: 출석 비콘 광고 시작 (");
+        Serial.print(g_session_duration);
+        Serial.println("초 후 자동 종료)");
+    }
+    if (g_session_expired) {
+        g_session_expired = false;
+        stop_session_beacon();
+        Serial.println("BLE: 출석 비콘 광고 종료, IDLE 복귀");
+    }
+}
+
+// 출석 비콘 광고 시작 (GATT 콜백에서 호출되므로 Serial 출력 없음)
 void start_session_beacon(const uint8_t* session_uuid, uint16_t duration_sec) {
     // 이미 ACTIVE면 기존 세션 중단
     if (g_state == STATE_ACTIVE) {
-        Serial.println("BLE: 기존 출석 세션 중단, 새 세션 시작");
         g_pAdvertising->stop(ADV_INSTANCE_SESSION);
         if (g_sessionTimer) {
             xTimerStop(g_sessionTimer, 0);
@@ -155,17 +169,12 @@ void start_session_beacon(const uint8_t* session_uuid, uint16_t duration_sec) {
     NimBLEExtAdvertisement sessionAdv(BLE_HCI_LE_PHY_1M, BLE_HCI_LE_PHY_1M);
     build_ibeacon_adv(sessionAdv, session_uuid);
 
-    if (!g_pAdvertising->setInstanceData(ADV_INSTANCE_SESSION, sessionAdv)) {
-        Serial.println("ERROR: 출석 비콘 광고 데이터 설정 실패");
-        return;
-    }
-
-    if (!g_pAdvertising->start(ADV_INSTANCE_SESSION, 0, 0)) {
-        Serial.println("ERROR: 출석 비콘 광고 시작 실패");
-        return;
-    }
+    if (!g_pAdvertising->setInstanceData(ADV_INSTANCE_SESSION, sessionAdv)) return;
+    if (!g_pAdvertising->start(ADV_INSTANCE_SESSION, 0, 0)) return;
 
     g_state = STATE_ACTIVE;
+    g_session_duration = duration_sec;
+    g_session_started = true;  // loop에서 로그 출력
 
     // FreeRTOS 타이머로 자동 종료 설정
     if (g_sessionTimer == nullptr) {
@@ -177,8 +186,4 @@ void start_session_beacon(const uint8_t* session_uuid, uint16_t duration_sec) {
         xTimerChangePeriod(g_sessionTimer, pdMS_TO_TICKS(duration_sec * 1000), 0);
     }
     xTimerStart(g_sessionTimer, 0);
-
-    Serial.print("BLE: 출석 비콘 광고 시작 (");
-    Serial.print(duration_sec);
-    Serial.println("초 후 자동 종료)");
 }
