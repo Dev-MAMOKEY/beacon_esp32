@@ -37,6 +37,11 @@ typedef enum {
 #define ADV_INTERVAL_MIN      160
 #define ADV_INTERVAL_MAX      160
 
+// Extended Advertising 인스턴스 ID
+#define ADV_INSTANCE_FIXED    0   // 고정 비콘 (항상)
+#define ADV_INSTANCE_SESSION  1   // 출석 비콘 (ACTIVE 시에만)
+#define ADV_INSTANCE_GATT     2   // GATT 연결용 (connectable)
+
 // ── NVS 설정 ────────────────────────────────────
 #define NVS_NAMESPACE         "beacon"
 #define NVS_KEY_PSK           "psk"

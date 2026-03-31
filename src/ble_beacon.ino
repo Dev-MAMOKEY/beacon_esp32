@@ -13,11 +13,6 @@ extern beacon_state_t g_state;
 // gatt_server.ino 전방 선언
 bool gatt_init();
 
-// Extended Advertising 인스턴스 ID
-#define ADV_INSTANCE_FIXED    0   // 고정 비콘 (항상)
-#define ADV_INSTANCE_SESSION  1   // 출석 비콘 (ACTIVE 시에만)
-#define ADV_INSTANCE_GATT     2   // GATT 연결용 (connectable)
-
 NimBLEExtAdvertising* g_pAdvertising = nullptr;
 TimerHandle_t g_sessionTimer = nullptr;
 volatile bool g_session_expired = false;   // 타이머 만료 플래그
@@ -114,25 +109,12 @@ bool ble_init_and_start() {
 
 // ── 출석 비콘 (세션) ────────────────────────────
 
-// 출석 비콘 광고 종료 (콜백에서 호출될 수 있으므로 Serial 출력 없음)
+// 출석 비콘 광고만 종료. 고정 비콘과 GATT 광고는 독립 인스턴스이므로 영향 없음.
 void stop_session_beacon() {
     if (g_state != STATE_ACTIVE) return;
 
     g_pAdvertising->stop(ADV_INSTANCE_SESSION);
     g_state = STATE_IDLE;
-
-    // GATT connectable 광고가 중단됐을 수 있으므로 재시작
-    if (!g_pAdvertising->isActive(ADV_INSTANCE_GATT)) {
-        NimBLEExtAdvertisement connAdv(BLE_HCI_LE_PHY_1M, BLE_HCI_LE_PHY_1M);
-        connAdv.setLegacyAdvertising(true);
-        connAdv.setConnectable(true);
-        connAdv.setScannable(true);
-        connAdv.setName(g_device_name);
-        connAdv.setMinInterval(ADV_INTERVAL_MIN);
-        connAdv.setMaxInterval(ADV_INTERVAL_MAX);
-        g_pAdvertising->setInstanceData(ADV_INSTANCE_GATT, connAdv);
-        g_pAdvertising->start(ADV_INSTANCE_GATT, 0, 0);
-    }
 }
 
 // FreeRTOS 타이머 콜백: 플래그만 세팅하고 loop에서 처리
