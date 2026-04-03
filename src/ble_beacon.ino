@@ -12,6 +12,8 @@ extern beacon_state_t g_state;
 
 // gatt_server.ino 전방 선언
 bool gatt_init();
+// led_status.ino 전방 선언
+void set_led_state(led_state_t state);
 
 NimBLEExtAdvertising* g_pAdvertising = nullptr;
 TimerHandle_t g_sessionTimer = nullptr;
@@ -115,6 +117,7 @@ void stop_session_beacon() {
 
     g_pAdvertising->stop(ADV_INSTANCE_SESSION);
     g_state = STATE_IDLE;
+    set_led_state(LED_STATE_IDLE);
 }
 
 // FreeRTOS 타이머 콜백: 플래그만 세팅하고 loop에서 처리
@@ -155,6 +158,7 @@ void start_session_beacon(const uint8_t* session_uuid, uint16_t duration_sec) {
     if (!g_pAdvertising->start(ADV_INSTANCE_SESSION, 0, 0)) return;
 
     g_state = STATE_ACTIVE;
+    set_led_state(LED_STATE_ACTIVE);
     g_session_duration = duration_sec;
     g_session_started = true;  // loop에서 로그 출력
 
