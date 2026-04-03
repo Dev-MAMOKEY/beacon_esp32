@@ -56,6 +56,15 @@ typedef enum {
 // ── LED 설정 ────────────────────────────────────
 #define LED_PIN               48
 #define LED_COUNT             1
+#define LED_BRIGHTNESS        30   // 0-255 (눈부심 방지)
+
+// LED 상태
+typedef enum {
+    LED_STATE_UNCONFIGURED,  // 노란색 느린 깜빡임
+    LED_STATE_IDLE,          // 파란색 상시 켜짐
+    LED_STATE_ACTIVE,        // 초록색 빠른 깜빡임
+    LED_STATE_ERROR          // 빨간색 상시 켜짐
+} led_state_t;
 
 // ── 순수 로직 함수 ──────────────────────────────
 
