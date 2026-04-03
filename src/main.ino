@@ -18,6 +18,7 @@ beacon_state_t g_state = STATE_IDLE;
 void nvs_load_config();
 void check_serial();
 bool ble_init_and_start();
+void ble_check_events();
 
 // ── Arduino 진입점 ──────────────────────────────
 
@@ -56,4 +57,5 @@ void setup() {
 
 void loop() {
     check_serial();
+    ble_check_events();
 }
