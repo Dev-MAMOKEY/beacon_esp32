@@ -19,6 +19,8 @@ void nvs_load_config();
 void check_serial();
 bool ble_init_and_start();
 void ble_check_events();
+void led_init();
+void set_led_state(led_state_t state);
 
 // ── Arduino 진입점 ──────────────────────────────
 
@@ -27,6 +29,9 @@ void setup() {
     delay(1000);  // USB CDC 안정화 대기
 
     Serial.println("MAMOKEY Beacon 부팅 중...");
+
+    // LED 초기화 (설정대기 상태로 시작)
+    led_init();
 
     // MAC 주소로 고정 비콘 UUID 생성
     uint8_t mac[6];
@@ -46,11 +51,14 @@ void setup() {
 
     if (!g_configured) {
         Serial.println("설정이 필요합니다. 시리얼로 SET_PSK, SET_SERVICE_UUID를 입력하세요.");
+        set_led_state(LED_STATE_UNCONFIGURED);
     } else {
         if (ble_init_and_start()) {
             Serial.println("BLE 초기화 완료.");
+            set_led_state(LED_STATE_IDLE);
         } else {
             Serial.println("ERROR: BLE 초기화 실패.");
+            set_led_state(LED_STATE_ERROR);
         }
     }
 }
